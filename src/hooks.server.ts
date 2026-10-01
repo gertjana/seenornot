@@ -12,7 +12,7 @@ export const init: ServerInit = async () => {
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	const password = env.APP_PASSWORD;
-	if (password) {
+	if (password && event.url.pathname !== '/health') {
 		const expected = 'Basic ' + btoa(`${env.APP_USER || 'me'}:${password}`);
 		if (event.request.headers.get('authorization') !== expected) {
 			return new Response('Authentication required', {

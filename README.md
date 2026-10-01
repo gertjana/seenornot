@@ -27,13 +27,35 @@ Edit `src/lib/server/db/schema.ts`, then run `npm run db:generate`. The new migr
 ## Production
 
 ```sh
-npm run build && node build          # uses .env-style env vars, PORT defaults to 3000
+npm run build && node --env-file=.env build # PORT defaults to 3000
 # or
 docker build -t seenornot .
 docker run -d -p 3000:3000 -v seenornot:/data -e TMDB_API_KEY=... -e TMDB_REGION=NL seenornot
 ```
 
 The app has no user accounts. If it can be reached from the internet, set `APP_PASSWORD` (and optionally `APP_USER`) to turn on HTTP Basic auth.
+
+## Container CI/CD
+
+GitHub Actions checks types and formatting, builds the image and smoke-tests startup (including SQLite migrations and password protection). On `main`, it publishes to GitHub Container Registry:
+
+- `ghcr.io/gertjana/seenornot:latest`
+- `ghcr.io/gertjana/seenornot:sha-<short-commit>` for pinned deployments and rollbacks
+
+Pull requests run checks and container tests without publishing or deploying. Publishing uses the built-in `GITHUB_TOKEN`, so no registry secret is needed in GitHub Actions. The workflow currently builds for **linux/amd64** (ordinary Intel/AMD servers).
+
+The runtime copies just the Node 24 binary into Alpine, alongside required runtime libraries, a clean production-only dependency installation and the compiled application. Source code, build tools, npm/yarn, caches, `.env` files and local databases are excluded. It runs as the unprivileged `node` user. CI prints Docker's reported image size (its compressed/uncompressed meaning depends on the Docker storage backend).
+
+## Coolify
+
+1. Create a **Docker Image** application with image `ghcr.io/gertjana/seenornot` and tag `latest` (or a `sha-...` tag).
+2. For a private GHCR package, log in to GHCR on the deployment server as the server user Coolify uses: `docker login ghcr.io -u gertjana`. Use a GitHub personal access token (classic) with `read:packages`. Alternatively, make only the package public in GitHub's package settings; the repository can remain private.
+3. Configure port **3000**, your domain, and runtime variables `TMDB_API_KEY`, `TMDB_REGION=NL`, `TMDB_LANGUAGE=en-US`, and `ORIGIN=https://your-app-domain`. Add `APP_PASSWORD` to protect your watch history. No API keys are needed at build time.
+4. Add a **persistent volume** mounted at `/data`. The default database URL is `file:/data/seenornot.db`. A bind-mounted directory must be writable by UID/GID **1000:1000**. Back up this volume; it contains your watch history.
+5. Use `/health` on port 3000 for HTTP health checks. It does not require authentication and returns no application data. The image also includes a Docker health check.
+6. Deploy after the first successful GitHub Actions run. Use only **one replica** with this local SQLite setup.
+
+For automatic redeployment after publishing, copy the application's **Deploy Webhook** URL from Coolify into the GitHub repository Actions secret `COOLIFY_WEBHOOK_URL`. Add a Coolify API token as `COOLIFY_TOKEN`. The webhook must be reachable from GitHub-hosted runners. Without these secrets the workflow only publishes the image, so you can deploy manually. A successful hook call queues deployment; monitor its completion in Coolify.
 
 ## Attribution
 
