@@ -13,6 +13,7 @@ export type EpisodeRef = {
 
 export type LibraryShow = {
 	id: number;
+	favorite: boolean;
 	name: string;
 	posterPath: string | null;
 	backdropPath: string | null;
@@ -32,6 +33,10 @@ export type LibraryShow = {
 	/** First episode with a future air date. */
 	upcoming: EpisodeRef | null;
 	category: ShowCategory;
+	seasons: {
+		seasonNumber: number;
+		episodes: { id: number; episodeNumber: number; aired: boolean; watched: boolean }[];
+	}[];
 };
 
 export type SearchResult = {

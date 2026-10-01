@@ -47,6 +47,8 @@ export const api = {
 		}),
 	addShow: (id: number) => request<{ id: number }>('POST', '/api/shows', { id }),
 	removeShow: (id: number) => request('DELETE', `/api/shows/${id}`),
+	setFavorite: (id: number, favorite: boolean) =>
+		request<{ id: number; favorite: boolean }>('PATCH', `/api/shows/${id}`, { favorite }),
 	refreshShow: (id: number) => request('POST', `/api/shows/${id}/refresh`),
 	setWatched: (ids: number[], watched: boolean) =>
 		request<{ count: number }>('POST', '/api/watched', { ids, watched })

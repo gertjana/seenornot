@@ -209,13 +209,26 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 		let lastWatchedAt: Date | null = null;
 		let next: (typeof eps)[number] | null = null;
 		let upcoming: (typeof eps)[number] | null = null;
+		const seasonMap = new Map<number, LibraryShow['seasons'][number]>();
 		for (const e of eps) {
 			const isW = !!e.watchedAt;
+			const airedEpisode = isAired(e.airDate, now);
+			let season = seasonMap.get(e.seasonNumber);
+			if (!season) {
+				season = { seasonNumber: e.seasonNumber, episodes: [] };
+				seasonMap.set(e.seasonNumber, season);
+			}
+			season.episodes.push({
+				id: e.id,
+				episodeNumber: e.episodeNumber,
+				aired: airedEpisode,
+				watched: isW
+			});
 			if (isW) {
 				watchedCount++;
 				if (!lastWatchedAt || e.watchedAt! > lastWatchedAt) lastWatchedAt = e.watchedAt;
 			}
-			if (isAired(e.airDate, now)) {
+			if (airedEpisode) {
 				aired++;
 				if (isW) watchedAired++;
 				else if (!next) next = e;
@@ -234,6 +247,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			};
 		return {
 			id: s.id,
+			favorite: s.favorite,
 			name: s.name,
 			posterPath: s.posterPath,
 			backdropPath: s.backdropPath,
@@ -249,7 +263,8 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			watchedAired,
 			next: pick(next),
 			upcoming: pick(upcoming),
-			category: categorize(s.status, aired, watchedAired, !!upcoming)
+			category: categorize(s.status, aired, watchedAired, !!upcoming),
+			seasons: [...seasonMap.values()]
 		};
 	});
 }

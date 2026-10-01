@@ -4,6 +4,7 @@
 	import Poster from '$lib/components/Poster.svelte';
 	import Progress from '$lib/components/Progress.svelte';
 	import Providers from '$lib/components/Providers.svelte';
+	import FavoriteButton from '$lib/components/FavoriteButton.svelte';
 	import { backdrop, epCode, formatDate, relativeDay, still } from '$lib/format';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { slide } from 'svelte/transition';
@@ -146,7 +147,10 @@
 			class="w-28 shrink-0 shadow-2xl sm:w-44"
 		/>
 		<div class="min-w-0 flex-1">
-			<h1 class="text-2xl font-bold sm:text-3xl">{data.show.name}</h1>
+			<div class="flex items-center gap-3">
+				<h1 class="flex-1 text-2xl font-bold sm:text-3xl">{data.show.name}</h1>
+				<FavoriteButton id={data.show.id} favorite={data.show.favorite} name={data.show.name} />
+			</div>
 			<div class="mt-1 flex flex-wrap gap-x-3 text-sm text-zinc-400">
 				{#if data.show.firstAirDate}<span>{data.show.firstAirDate.slice(0, 4)}</span>{/if}
 				{#if data.show.status}<span>{data.show.status}</span>{/if}

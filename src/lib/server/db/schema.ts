@@ -6,6 +6,7 @@ export type { Provider };
 /** A TV show in the user's library. `id` is the TMDB series id. */
 export const shows = sqliteTable('shows', {
 	id: integer('id').primaryKey(),
+	favorite: integer('favorite', { mode: 'boolean' }).notNull().default(false),
 	name: text('name').notNull(),
 	originalName: text('original_name'),
 	overview: text('overview'),

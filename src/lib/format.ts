@@ -1,5 +1,7 @@
 const IMG = 'https://image.tmdb.org/t/p';
 
+export const sortTitle = (title: string) => title.trim().replace(/^the\s+/i, '');
+
 export const poster = (
 	path: string | null | undefined,
 	size: 'w92' | 'w185' | 'w342' | 'w500' = 'w342'

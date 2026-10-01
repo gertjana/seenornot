@@ -1,0 +1,1 @@
+ALTER TABLE `shows` ADD `favorite` integer DEFAULT false NOT NULL;

@@ -6,6 +6,9 @@ Keep track of which series episodes you've watched, and where they're streaming.
 - **Search** (`/` or `Ctrl/⌘+K`): type to filter your library or add a show from TMDB. `Enter` adds and opens it, `Shift+Enter` only adds it
 - **Show page**: tick single episodes, a whole season, or everything up to an episode (`Shift`+click or the "Up to here" button)
 - **Library**: filter by status (Watching / Not started / Up to date / Completed), by streaming platform, or by name
+- **Favorites**: star shows in the library or show page to pin them in a separate section at the top of the library and home screen.
+- **Title sorting**: alphabetical by default in the library, ignoring a leading "The" ("The Expanse" sorts under E).
+- **List view**: switch from posters to a table with platform icons and a column per season. Each clickable episode square is filled when watched, outlined when unwatched, or dashed when unaired. The view choice is remembered on this browser.
 - Every action shows an **Undo** toast
 - Show data (new episodes, providers) refreshes automatically in the background: daily for running shows, weekly for ended ones
 

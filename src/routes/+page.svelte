@@ -3,12 +3,23 @@
 	import Poster from '$lib/components/Poster.svelte';
 	import Progress from '$lib/components/Progress.svelte';
 	import Providers from '$lib/components/Providers.svelte';
-	import { backdrop, epCode, relativeDay, still } from '$lib/format';
+	import FavoriteButton from '$lib/components/FavoriteButton.svelte';
+	import { backdrop, epCode, relativeDay, still, sortTitle } from '$lib/format';
 	import type { LibraryShow } from '$lib/types';
 	import { flip } from 'svelte/animate';
 	import { fade } from 'svelte/transition';
 
 	let { data } = $props();
+	const favorites = $derived(
+		data.shows
+			.filter((s) => s.favorite)
+			.sort((a, b) =>
+				sortTitle(a.name).localeCompare(sortTitle(b.name), undefined, {
+					sensitivity: 'base',
+					numeric: true
+				})
+			)
+	);
 
 	const upNext = $derived(
 		data.shows
@@ -59,6 +70,31 @@
 		</p>
 	</div>
 {:else}
+	{#if favorites.length}
+		<section class="mb-8">
+			<h2 class="mb-3 text-xl font-bold">Favorites</h2>
+			<ul class="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+				{#each favorites as show (show.id)}
+					<li class="relative">
+						<a href="/show/{show.id}"
+							><Poster path={show.posterPath} alt={show.name} />
+							<div class="mt-2 truncate text-sm font-medium">{show.name}</div></a
+						>
+						<div class="absolute top-2 right-2">
+							<FavoriteButton id={show.id} favorite={show.favorite} name={show.name} />
+						</div>
+						{#if show.next}<button
+								onclick={() => watchNext(show)}
+								disabled={pending[show.id]}
+								class="mt-1 rounded px-1.5 py-1 font-mono text-xs text-amber-400 hover:bg-zinc-800 disabled:opacity-50"
+								title="Mark next episode watched"
+								>✓ {epCode(show.next.seasonNumber, show.next.episodeNumber)}</button
+							>{/if}
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 	<section>
 		<h2 class="mb-3 text-xl font-bold">Up next</h2>
 		{#if upNext.length === 0}
