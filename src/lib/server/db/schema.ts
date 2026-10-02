@@ -109,7 +109,10 @@ export const watched = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date())
 	},
-	(t) => [primaryKey({ columns: [t.userId, t.episodeId] })]
+	(t) => [
+		primaryKey({ columns: [t.userId, t.episodeId] }),
+		index('watched_episode_idx').on(t.episodeId)
+	]
 );
 
 // Staged single-user history is claimed atomically by the first provisioned user.
