@@ -13,6 +13,7 @@
 	];
 
 	function onkeydown(e: KeyboardEvent) {
+		if (!data.user) return;
 		const el = e.target as HTMLElement;
 		const typing = el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
 		if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) {
@@ -39,26 +40,41 @@
 			<a href="/" class="text-lg font-bold tracking-tight">
 				Seen<span class="text-amber-400">Or</span>Not
 			</a>
-			<nav class="flex gap-1">
-				{#each nav as n (n.href)}
-					<a
-						href={n.href}
-						class="rounded-lg px-3 py-1.5 text-sm font-medium {page.url.pathname === n.href
-							? 'bg-zinc-800 text-white'
-							: 'text-zinc-400 hover:text-white'}">{n.label}</a
-					>
-				{/each}
-			</nav>
-			<button
-				onclick={() => (palette.open = true)}
-				class="ml-auto flex items-center gap-2 rounded-lg bg-zinc-900 px-3 py-1.5 text-sm text-zinc-400 ring-1 ring-zinc-800 hover:text-zinc-200 sm:w-64"
-			>
-				<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-					><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
+			{#if data.user}
+				<nav class="flex gap-1">
+					{#each nav as n (n.href)}
+						<a
+							href={n.href}
+							class="rounded-lg px-3 py-1.5 text-sm font-medium {page.url.pathname === n.href
+								? 'bg-zinc-800 text-white'
+								: 'text-zinc-400 hover:text-white'}">{n.label}</a
+						>
+					{/each}
+				</nav>
+				<button
+					onclick={() => (palette.open = true)}
+					class="ml-auto flex items-center gap-2 rounded-lg bg-zinc-900 px-3 py-1.5 text-sm text-zinc-400 ring-1 ring-zinc-800 hover:text-zinc-200 sm:w-48"
 				>
-				<span class="hidden sm:inline">Search or add a show…</span>
-				<kbd class="ml-auto hidden rounded bg-zinc-800 px-1.5 text-xs sm:inline">/</kbd>
-			</button>
+					<svg
+						class="h-4 w-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
+					>
+					<span class="hidden sm:inline">Search or add a show…</span>
+					<kbd class="ml-auto hidden rounded bg-zinc-800 px-1.5 text-xs sm:inline">/</kbd>
+				</button>
+				<form method="POST" action="/logout" class="flex items-center gap-2">
+					<span class="hidden max-w-24 truncate text-xs text-zinc-400 md:inline"
+						>{data.user.username}</span
+					>
+					<button
+						class="rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white"
+						>Log out</button
+					>
+				</form>
+			{/if}
 		</div>
 	</header>
 
@@ -86,5 +102,5 @@
 	</footer>
 </div>
 
-<SearchPalette library={data.librarySummary} />
+{#if data.user}<SearchPalette library={data.librarySummary} />{/if}
 <Toasts />

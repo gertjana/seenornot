@@ -19,7 +19,8 @@ Stack: SvelteKit (Svelte 5) · TypeScript · Tailwind CSS 4 · SQLite (libsql) �
 1. Get a free TMDB API key: https://www.themoviedb.org/settings/api (either the "API Key" or the "API Read Access Token" works).
 2. `cp .env.example .env` and set `TMDB_API_KEY`. Change `TMDB_REGION` (default `NL`) to choose which country's streaming providers are shown.
 3. `npm install`
-4. `npm run dev`
+4. `npm run user:create -- gertjan` (prompts for a password)
+5. `npm run dev`, then sign in at `/login`.
 
 Database migrations in `./drizzle` run automatically at startup.
 
@@ -36,11 +37,30 @@ docker build -t seenornot .
 docker run -d -p 3000:3000 -v seenornot:/data -e TMDB_API_KEY=... -e TMDB_REGION=NL seenornot
 ```
 
-The app has no user accounts. If it can be reached from the internet, set `APP_PASSWORD` (and optionally `APP_USER`) to turn on HTTP Basic auth.
+## User Accounts
+
+Each user has their own library, favorites and watched history. TMDB metadata and the configured streaming country/language remain shared. Passwords are stored as salted scrypt hashes, not plaintext. Login uses database-backed, 30-day sessions with HttpOnly/SameSite cookies; HTTPS enables Secure cookies. Logout revokes the session. Login attempts are rate-limited per username and client address within the running instance.
+
+There is no registration or password-reset flow. Provision accounts from a trusted terminal:
+
+```sh
+# Local development (loads .env automatically)
+npm run user:create -- gertjan
+
+# Coolify: in the running application's Terminal
+node scripts/create-user.mjs gertjan
+
+# Or from the Docker host; -it is required for the hidden password prompt
+docker exec -it <container-name> node scripts/create-user.mjs gertjan
+```
+
+Usernames are case-insensitive, 3-32 characters (`a-z`, digits, `_`, `.`, `-`). Passwords must be 12-256 characters. For non-interactive provisioning, the command also accepts `SEENORNOT_PASSWORD` through the environment; never commit it or configure it as a permanent application variable.
+
+**Upgrading from single-user:** back up `/data` before deploying. The migration stages your existing library, favorites and watched timestamps, and the first account created claims them atomically. Later accounts start empty. There is no default account/password and no public setup endpoint. `APP_USER` and `APP_PASSWORD` are no longer used; remove them from Coolify. Create the first account after deployment through the terminal before signing in.
 
 ## Container CI/CD
 
-GitHub Actions checks types and formatting, builds the image and smoke-tests startup (including SQLite migrations and password protection). On `main`, it publishes to GitHub Container Registry:
+GitHub Actions checks types and formatting, builds the image and smoke-tests startup, account provisioning, session login/logout and private API protection. On `main`, it publishes to GitHub Container Registry:
 
 - `ghcr.io/gertjana/seenornot:latest`
 - `ghcr.io/gertjana/seenornot:sha-<short-commit>` for pinned deployments and rollbacks
@@ -53,7 +73,7 @@ The runtime copies just the Node 24 binary into Alpine, alongside required runti
 
 1. Create a **Docker Image** application with image `ghcr.io/gertjana/seenornot` and tag `latest` (or a `sha-...` tag).
 2. For a private GHCR package, log in to GHCR on the deployment server as the server user Coolify uses: `docker login ghcr.io -u gertjana`. Use a GitHub personal access token (classic) with `read:packages`. Alternatively, make only the package public in GitHub's package settings; the repository can remain private.
-3. Configure port **3000**, your domain, and runtime variables `TMDB_API_KEY`, `TMDB_REGION=NL`, `TMDB_LANGUAGE=en-US`, and `ORIGIN=https://your-app-domain`. Add `APP_PASSWORD` to protect your watch history. No API keys are needed at build time.
+3. Configure port **3000**, your HTTPS domain, and runtime variables `TMDB_API_KEY`, `TMDB_REGION=NL`, `TMDB_LANGUAGE=en-US`, and `ORIGIN=https://your-app-domain`. For a single trusted Coolify reverse proxy, also set `ADDRESS_HEADER=x-forwarded-for` and `XFF_DEPTH=1` so login limits use the actual client address rather than sharing one bucket for the proxy. Adjust depth for additional proxies (such as Cloudflare), ensure the proxy overwrites/sanitizes forwarded headers, and do not expose the container port directly to the internet. No API keys or account passwords are needed at build time.
 4. Add a **persistent volume** mounted at `/data`. The default database URL is `file:/data/seenornot.db`. A bind-mounted directory must be writable by UID/GID **1000:1000**. Back up this volume; it contains your watch history.
 5. Use `/health` on port 3000 for HTTP health checks. It does not require authentication and returns no application data. The image also includes a Docker health check.
 6. Deploy after the first successful GitHub Actions run. Use only **one replica** with this local SQLite setup.

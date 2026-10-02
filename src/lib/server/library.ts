@@ -1,6 +1,7 @@
 import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { db } from './db';
-import { episodes, seasons, shows, watched } from './db/schema';
+import { episodes, seasons, shows, watched, userShows } from './db/schema';
+import { error } from '@sveltejs/kit';
 import { getShowWithEpisodes } from './tmdb';
 import type { LibraryShow, ShowCategory } from '$lib/types';
 
@@ -104,13 +105,26 @@ export async function syncShow(id: number) {
 	});
 }
 
-export async function removeShow(id: number) {
+export async function addShow(userId: number, id: number) {
+	await syncShow(id);
+	await db.insert(userShows).values({ userId, showId: id }).onConflictDoNothing();
+}
+
+export async function requireShow(userId: number, id: number) {
+	const [row] = await db
+		.select({ id: userShows.showId })
+		.from(userShows)
+		.where(and(eq(userShows.userId, userId), eq(userShows.showId, id)));
+	if (!row) error(404, 'Show not in your library');
+}
+
+export async function removeShow(userId: number, id: number) {
 	await db.transaction(async (tx) => {
 		const ids = tx.select({ id: episodes.id }).from(episodes).where(eq(episodes.showId, id));
-		await tx.delete(watched).where(inArray(watched.episodeId, ids));
-		await tx.delete(episodes).where(eq(episodes.showId, id));
-		await tx.delete(seasons).where(eq(seasons.showId, id));
-		await tx.delete(shows).where(eq(shows.id, id));
+		await tx
+			.delete(watched)
+			.where(and(eq(watched.userId, userId), inArray(watched.episodeId, ids)));
+		await tx.delete(userShows).where(and(eq(userShows.userId, userId), eq(userShows.showId, id)));
 	});
 }
 
@@ -147,22 +161,24 @@ export function refreshStaleShows() {
 
 // ---------- Watched state ----------
 
-export async function setWatched(episodeIds: number[], value: boolean) {
+export async function setWatched(userId: number, episodeIds: number[], value: boolean) {
 	if (!episodeIds.length) return 0;
+	const ids = [...new Set(episodeIds)];
+	const existing = await db
+		.select({ id: episodes.id })
+		.from(episodes)
+		.innerJoin(userShows, and(eq(userShows.showId, episodes.showId), eq(userShows.userId, userId)))
+		.where(inArray(episodes.id, ids));
+	if (existing.length !== ids.length) error(404, 'Episode not in your library');
 	if (value) {
-		const existing = await db
-			.select({ id: episodes.id })
-			.from(episodes)
-			.where(inArray(episodes.id, episodeIds));
-		if (!existing.length) return 0;
 		const now = new Date();
 		await db
 			.insert(watched)
-			.values(existing.map((e) => ({ episodeId: e.id, watchedAt: now })))
+			.values(existing.map((e) => ({ userId, episodeId: e.id, watchedAt: now })))
 			.onConflictDoNothing();
 		return existing.length;
 	}
-	await db.delete(watched).where(inArray(watched.episodeId, episodeIds));
+	await db.delete(watched).where(and(eq(watched.userId, userId), inArray(watched.episodeId, ids)));
 	return episodeIds.length;
 }
 
@@ -180,10 +196,13 @@ function categorize(
 }
 
 /** Every show in the library with progress, next episode and category. Specials (season 0) are ignored. */
-export async function getLibrary(): Promise<LibraryShow[]> {
+export async function getLibrary(userId: number): Promise<LibraryShow[]> {
 	const now = today();
 	const [showRows, epRows] = await Promise.all([
-		db.select().from(shows),
+		db
+			.select({ show: shows, favorite: userShows.favorite, addedAt: userShows.addedAt })
+			.from(shows)
+			.innerJoin(userShows, and(eq(userShows.showId, shows.id), eq(userShows.userId, userId))),
 		db
 			.select({
 				id: episodes.id,
@@ -196,7 +215,11 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 				watchedAt: watched.watchedAt
 			})
 			.from(episodes)
-			.leftJoin(watched, eq(watched.episodeId, episodes.id))
+			.innerJoin(
+				userShows,
+				and(eq(userShows.showId, episodes.showId), eq(userShows.userId, userId))
+			)
+			.leftJoin(watched, and(eq(watched.episodeId, episodes.id), eq(watched.userId, userId)))
 			.where(sql`${episodes.seasonNumber} > 0`)
 			.orderBy(episodes.showId, episodes.seasonNumber, episodes.episodeNumber)
 	]);
@@ -208,7 +231,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 		list.push(e);
 	}
 
-	return showRows.map((s) => {
+	return showRows.map(({ show: s, favorite, addedAt }) => {
 		const eps = byShow.get(s.id) ?? [];
 		let aired = 0;
 		let watchedAired = 0;
@@ -256,7 +279,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			};
 		return {
 			id: s.id,
-			favorite: s.favorite,
+			favorite,
 			name: s.name,
 			posterPath: s.posterPath,
 			backdropPath: s.backdropPath,
@@ -266,7 +289,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			voteCount: s.voteCount,
 			networks: s.networks,
 			providers: s.providers,
-			addedAt: s.addedAt.toISOString(),
+			addedAt: addedAt.toISOString(),
 			lastWatchedAt: lastWatchedAt?.toISOString() ?? null,
 			lastEpisodeAirDate,
 			total: eps.length,
@@ -281,9 +304,14 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 	});
 }
 
-export async function getShow(id: number) {
-	const [show] = await db.select().from(shows).where(eq(shows.id, id));
-	if (!show) return null;
+export async function getShow(userId: number, id: number) {
+	const [row] = await db
+		.select({ show: shows, favorite: userShows.favorite, addedAt: userShows.addedAt })
+		.from(shows)
+		.innerJoin(userShows, and(eq(userShows.showId, shows.id), eq(userShows.userId, userId)))
+		.where(eq(shows.id, id));
+	if (!row) return null;
+	const { show, favorite, addedAt } = row;
 	const [seasonRows, epRows] = await Promise.all([
 		db.select().from(seasons).where(eq(seasons.showId, id)).orderBy(seasons.seasonNumber),
 		db
@@ -299,7 +327,7 @@ export async function getShow(id: number) {
 				watchedAt: watched.watchedAt
 			})
 			.from(episodes)
-			.leftJoin(watched, eq(watched.episodeId, episodes.id))
+			.leftJoin(watched, and(eq(watched.episodeId, episodes.id), eq(watched.userId, userId)))
 			.where(eq(episodes.showId, id))
 			.orderBy(episodes.seasonNumber, episodes.episodeNumber)
 	]);
@@ -308,7 +336,8 @@ export async function getShow(id: number) {
 	return {
 		show: {
 			...show,
-			addedAt: show.addedAt.toISOString(),
+			favorite,
+			addedAt: addedAt.toISOString(),
 			syncedAt: show.syncedAt?.toISOString() ?? null
 		},
 		seasons: seasonRows
@@ -337,7 +366,10 @@ export async function getShow(id: number) {
 	};
 }
 
-export async function libraryIds() {
-	const rows = await db.select({ id: shows.id }).from(shows);
+export async function libraryIds(userId: number) {
+	const rows = await db
+		.select({ id: userShows.showId })
+		.from(userShows)
+		.where(eq(userShows.userId, userId));
 	return rows.map((r) => r.id);
 }

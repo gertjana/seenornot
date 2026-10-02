@@ -5,11 +5,11 @@ import { searchShows } from '$lib/server/tmdb';
 import type { SearchResult } from '$lib/types';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = ({ url }) =>
+export const GET: RequestHandler = ({ url, locals }) =>
 	handleApi(async () => {
 		const q = url.searchParams.get('q')?.trim() ?? '';
 		if (q.length < 2) return json([]);
-		const [results, ids] = await Promise.all([searchShows(q), libraryIds()]);
+		const [results, ids] = await Promise.all([searchShows(q), libraryIds(locals.user!.id)]);
 		const inLib = new Set(ids);
 		const out: SearchResult[] = results.slice(0, 12).map((r) => ({
 			id: r.id,

@@ -4,7 +4,7 @@ import { setWatched } from '$lib/server/library';
 import type { RequestHandler } from './$types';
 
 /** Body: { ids: number[], watched: boolean } — mark episodes watched / unwatched. */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	const body = await request.json().catch(() => null);
 	const ids: unknown = body?.ids;
 	if (
@@ -15,6 +15,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	) {
 		return badRequest('Expected { ids: number[], watched: boolean }');
 	}
-	const count = await setWatched(ids as number[], body.watched);
+	const count = await setWatched(locals.user!.id, ids as number[], body.watched);
 	return json({ count });
 };

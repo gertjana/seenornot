@@ -15,6 +15,7 @@ let ready: Promise<void> | undefined;
 /** Enable FK constraints and apply pending migrations (from ./drizzle). Safe to call repeatedly. */
 export function initDb() {
 	ready ??= (async () => {
+		await client.execute('PRAGMA busy_timeout = 5000');
 		await client.execute('PRAGMA foreign_keys = ON');
 		await client.execute('PRAGMA journal_mode = WAL');
 		await migrate(db, { migrationsFolder: env.MIGRATIONS_DIR || 'drizzle' });
