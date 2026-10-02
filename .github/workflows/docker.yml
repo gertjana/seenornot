@@ -46,17 +46,26 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke test
         run: |
-          docker run -d --name smoke -p 127.0.0.1:3000:3000 seenornot:test
-          trap 'docker logs smoke; docker rm -f smoke' EXIT
+          docker run -d --name smoke -p 127.0.0.1:3000:3000 -e ORIGIN=http://127.0.0.1:3000 seenornot:test
+          trap 'docker logs smoke; docker rm -fv smoke; rm -f /tmp/smoke-cookies' EXIT
+          expect_status() {
+            local expected="$1" label="$2" actual
+            shift 2
+            actual=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$@")
+            echo "$label: expected $expected, received $actual"
+            test "$actual" = "$expected"
+          }
           curl --fail --retry 15 --retry-delay 2 --retry-all-errors http://127.0.0.1:3000/health
           docker exec -e SEENORNOT_PASSWORD=ci-test-password smoke node scripts/create-user.mjs ci-user
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/)" = 303
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/api/search?q=test)" = 401
-          test "$(curl --silent --cookie-jar /tmp/cookies --output /dev/null --write-out '%{http_code}' \
-            --header 'Accept: text/html' --header 'Origin: http://127.0.0.1:3000' --data 'username=ci-user&password=ci-test-password' http://127.0.0.1:3000/login)" = 303
-          curl --fail --cookie /tmp/cookies http://127.0.0.1:3000/library > /dev/null
-          test "$(curl --silent --cookie /tmp/cookies --request POST --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/logout)" = 303
-          test "$(curl --silent --cookie /tmp/cookies --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/library)" = 303
+          expect_status 303 'Anonymous home' http://127.0.0.1:3000/
+          expect_status 401 'Anonymous API' 'http://127.0.0.1:3000/api/search?q=test'
+          expect_status 303 'Login' --cookie-jar /tmp/smoke-cookies \
+            --header 'Accept: text/html' --header 'Origin: http://127.0.0.1:3000' \
+            --data 'username=ci-user&password=ci-test-password' http://127.0.0.1:3000/login
+          expect_status 200 'Authenticated library' --cookie /tmp/smoke-cookies http://127.0.0.1:3000/library
+          expect_status 303 'Logout' --cookie /tmp/smoke-cookies --request POST \
+            --header 'Accept: text/html' --header 'Origin: http://127.0.0.1:3000' http://127.0.0.1:3000/logout
+          expect_status 303 'Revoked session' --cookie /tmp/smoke-cookies http://127.0.0.1:3000/library
           docker image inspect seenornot:test --format 'Image size reported by Docker: {{.Size}} bytes'
       - name: Multi-user upgrade and isolation tests
         run: docker run --rm -v "$PWD/scripts/test-multiuser.mjs:/app/scripts/test-multiuser.mjs:ro" seenornot:test node scripts/test-multiuser.mjs
