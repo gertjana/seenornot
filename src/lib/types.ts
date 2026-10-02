@@ -25,6 +25,8 @@ export type LibraryShow = {
 	providers: Provider[];
 	addedAt: string;
 	lastWatchedAt: string | null;
+	/** Most recent air date among aired regular episodes, regardless of watch state. */
+	lastEpisodeAirDate: string | null;
 	/** Regular episodes (specials excluded). */
 	total: number;
 	aired: number;

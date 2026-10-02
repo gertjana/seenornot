@@ -214,6 +214,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 		let watchedAired = 0;
 		let watchedCount = 0;
 		let lastWatchedAt: Date | null = null;
+		let lastEpisodeAirDate: string | null = null;
 		let next: (typeof eps)[number] | null = null;
 		let upcoming: (typeof eps)[number] | null = null;
 		const seasonMap = new Map<number, LibraryShow['seasons'][number]>();
@@ -237,6 +238,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			}
 			if (airedEpisode) {
 				aired++;
+				if (!lastEpisodeAirDate || e.airDate! > lastEpisodeAirDate) lastEpisodeAirDate = e.airDate;
 				if (isW) watchedAired++;
 				else if (!next) next = e;
 			} else if (e.airDate && !upcoming) {
@@ -266,6 +268,7 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			providers: s.providers,
 			addedAt: s.addedAt.toISOString(),
 			lastWatchedAt: lastWatchedAt?.toISOString() ?? null,
+			lastEpisodeAirDate,
 			total: eps.length,
 			aired,
 			watched: watchedCount,

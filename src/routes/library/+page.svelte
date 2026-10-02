@@ -15,7 +15,7 @@
 	let text = $state('');
 	let category = $state<ShowCategory | 'all'>('all');
 	let provider = $state<number | null>(null);
-	let sort = $state<'activity' | 'name' | 'added' | 'left'>('name');
+	let sort = $state<'activity' | 'name' | 'added' | 'left' | 'latest_episode'>('name');
 	let view = $state<'grid' | 'list'>('grid');
 	onMount(() => {
 		try {
@@ -73,6 +73,12 @@
 					numeric: true
 				}) || a.name.localeCompare(b.name),
 			added: (a, b) => b.addedAt.localeCompare(a.addedAt),
+			latest_episode: (a, b) =>
+				(b.lastEpisodeAirDate ?? '').localeCompare(a.lastEpisodeAirDate ?? '') ||
+				sortTitle(a.name).localeCompare(sortTitle(b.name), undefined, {
+					sensitivity: 'base',
+					numeric: true
+				}),
 			left: (a, b) => a.aired - a.watchedAired - (b.aired - b.watchedAired)
 		};
 		return list.sort(by[sort]);
@@ -145,6 +151,7 @@
 			<option value="activity">Recently watched</option>
 			<option value="name">Name</option>
 			<option value="added">Recently added</option>
+			<option value="latest_episode">Latest episode</option>
 			<option value="left">Fewest left</option>
 		</select>
 		<div class="flex rounded-lg bg-zinc-900 p-1 ring-1 ring-zinc-800" aria-label="Library view">
