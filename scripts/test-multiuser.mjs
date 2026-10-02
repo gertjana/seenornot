@@ -138,9 +138,10 @@ try {
 		'PASS: legacy upgrade, account provisioning, password hashing, sessions, isolation, logout, expiry, CSRF and rate limits.'
 	);
 } finally {
-	if (app) {
+	if (app && app.exitCode === null && app.signalCode === null) {
+		const exited = new Promise((resolve) => app.once('exit', resolve));
 		app.kill('SIGTERM');
-		await new Promise((resolve) => app.once('exit', resolve));
+		await exited;
 	}
 	client.close();
 	await rm(folder, { recursive: true, force: true });
