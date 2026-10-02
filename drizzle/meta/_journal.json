@@ -22,6 +22,20 @@
       "when": 1790938546521,
       "tag": "0002_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790940362203,
+      "tag": "0003_multiuser",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790942492147,
+      "tag": "0004_slippery_ricochet",
+      "breakpoints": true
     }
   ]
 }

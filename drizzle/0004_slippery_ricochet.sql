@@ -1,0 +1,1 @@
+CREATE INDEX `watched_episode_idx` ON `watched` (`episode_id`);
