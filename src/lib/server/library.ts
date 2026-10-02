@@ -22,6 +22,8 @@ export async function syncShow(id: number) {
 		backdropPath: details.backdrop_path,
 		firstAirDate: details.first_air_date || null,
 		status: details.status,
+		voteAverage: details.vote_average,
+		voteCount: details.vote_count,
 		networks: details.networks.map((n) => n.name),
 		providers,
 		providersLink,
@@ -122,12 +124,17 @@ export function refreshStaleShows() {
 	if (refreshing) return refreshing;
 	refreshing = (async () => {
 		const all = await db
-			.select({ id: shows.id, status: shows.status, syncedAt: shows.syncedAt })
+			.select({
+				id: shows.id,
+				status: shows.status,
+				syncedAt: shows.syncedAt,
+				voteCount: shows.voteCount
+			})
 			.from(shows);
 		const now = Date.now();
 		for (const s of all) {
 			const maxAge = (ENDED.has(s.status ?? '') ? 7 : 1) * 24 * 3600 * 1000;
-			if (s.syncedAt && now - s.syncedAt.getTime() < maxAge) continue;
+			if (s.voteCount !== null && s.syncedAt && now - s.syncedAt.getTime() < maxAge) continue;
 			try {
 				await syncShow(s.id);
 			} catch (e) {
@@ -253,6 +260,8 @@ export async function getLibrary(): Promise<LibraryShow[]> {
 			backdropPath: s.backdropPath,
 			firstAirDate: s.firstAirDate,
 			status: s.status,
+			voteAverage: s.voteAverage,
+			voteCount: s.voteCount,
 			networks: s.networks,
 			providers: s.providers,
 			addedAt: s.addedAt.toISOString(),

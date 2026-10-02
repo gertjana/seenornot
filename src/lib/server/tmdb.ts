@@ -71,6 +71,8 @@ export type TmdbShowDetails = {
 	backdrop_path: string | null;
 	first_air_date: string | null;
 	status: string;
+	vote_average: number;
+	vote_count: number;
 	networks: { id: number; name: string }[];
 	seasons: {
 		season_number: number;

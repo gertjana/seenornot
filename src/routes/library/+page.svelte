@@ -2,8 +2,10 @@
 	import { markEpisodes } from '$lib/client.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import Progress from '$lib/components/Progress.svelte';
+	import Rating from '$lib/components/Rating.svelte';
 	import FavoriteButton from '$lib/components/FavoriteButton.svelte';
 	import Providers from '$lib/components/Providers.svelte';
+	import ScrollableTable from '$lib/components/ScrollableTable.svelte';
 	import { onMount } from 'svelte';
 	import { epCode, logo, sortTitle } from '$lib/format';
 	import { CATEGORY_LABEL, type LibraryShow, type Provider, type ShowCategory } from '$lib/types';
@@ -75,14 +77,16 @@
 		};
 		return list.sort(by[sort]);
 	});
-	const groups = $derived([
-		{ title: 'Favorites', shows: filtered.filter((s) => s.favorite) },
-		{ title: 'All shows', shows: filtered.filter((s) => !s.favorite) }
-	]);
-	const seasonColumns = $derived(
-		[...new Set(filtered.flatMap((s) => s.seasons.map((season) => season.seasonNumber)))].sort(
-			(a, b) => a - b
-		)
+	const groups = $derived(
+		[
+			{ title: 'Favorites', shows: filtered.filter((s) => s.favorite) },
+			{ title: 'All shows', shows: filtered.filter((s) => !s.favorite) }
+		].map((group) => ({
+			...group,
+			seasonColumns: [
+				...new Set(group.shows.flatMap((s) => s.seasons.map((season) => season.seasonNumber)))
+			].sort((a, b) => a - b)
+		}))
 	);
 	let episodePending = $state<Record<number, boolean>>({});
 	async function toggleEpisode(ep: LibraryShow['seasons'][number]['episodes'][number]) {
@@ -208,14 +212,15 @@
 					{group.title} <span class="text-sm font-normal text-zinc-500">{group.shows.length}</span>
 				</h2>
 				{#if view === 'list'}
-					<div class="overflow-x-auto rounded-xl ring-1 ring-zinc-800">
+					<ScrollableTable label={group.title}>
 						<table class="w-full border-collapse text-left text-sm">
 							<thead class="bg-zinc-900 text-xs text-zinc-400">
 								<tr
 									><th class="p-3" scope="col">Poster</th><th class="p-3" scope="col">Title</th><th
 										class="p-3"
 										scope="col">Platform</th
-									>{#each seasonColumns as n}<th class="min-w-32 p-3" scope="col">Season {n}</th
+									>{#each group.seasonColumns as n}<th class="min-w-32 p-3" scope="col"
+											>Season {n}</th
 										>{/each}</tr
 								>
 							</thead>
@@ -241,6 +246,7 @@
 													<div class="mt-1 text-xs text-zinc-500">
 														{CATEGORY_LABEL[show.category]} · {show.watchedAired}/{show.aired}
 													</div>
+													<Rating average={show.voteAverage} votes={show.voteCount} />
 												</div>
 												<FavoriteButton id={show.id} favorite={show.favorite} name={show.name} />
 											</div></th
@@ -251,7 +257,7 @@
 												max={show.providers.length}
 											/>{#if !show.providers.length}<span class="text-zinc-600">-</span>{/if}</td
 										>
-										{#each seasonColumns as n}
+										{#each group.seasonColumns as n}
 											{@const season = show.seasons.find((s) => s.seasonNumber === n)}
 											<td class="p-3 align-middle">
 												{#if season}
@@ -284,7 +290,7 @@
 								{/each}
 							</tbody>
 						</table>
-					</div>
+					</ScrollableTable>
 				{:else}
 					<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
 						{#each group.shows as show (show.id)}
@@ -303,17 +309,11 @@
 										>
 											{CATEGORY_LABEL[show.category]}
 										</span>
-										{#if show.providers[0]?.logo}
-											<img
-												src={logo(show.providers[0].logo)}
-												alt={show.providers[0].name}
-												title={show.providers.map((p) => p.name).join(', ')}
-												class="absolute right-2 bottom-2 h-7 w-7 rounded-md shadow"
-											/>
-										{/if}
 									</div>
 									<div class="mt-2 truncate text-sm font-medium">{show.name}</div>
 								</a>
+								<div class="mt-1.5"><Providers providers={show.providers} /></div>
+								<Rating average={show.voteAverage} votes={show.voteCount} />
 								<div class="absolute top-8 right-2">
 									<FavoriteButton id={show.id} favorite={show.favorite} name={show.name} />
 								</div>

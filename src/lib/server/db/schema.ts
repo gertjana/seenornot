@@ -1,4 +1,4 @@
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import type { Provider } from '../../types';
 export type { Provider };
@@ -15,6 +15,8 @@ export const shows = sqliteTable('shows', {
 	firstAirDate: text('first_air_date'),
 	/** TMDB status: "Returning Series", "Ended", "Canceled", "In Production", ... */
 	status: text('status'),
+	voteAverage: real('vote_average'),
+	voteCount: integer('vote_count'),
 	networks: text('networks', { mode: 'json' }).$type<string[]>().notNull().default([]),
 	/** Subscription ("flatrate") providers in the configured region. */
 	providers: text('providers', { mode: 'json' }).$type<Provider[]>().notNull().default([]),

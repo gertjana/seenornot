@@ -19,6 +19,8 @@ export type LibraryShow = {
 	backdropPath: string | null;
 	firstAirDate: string | null;
 	status: string | null;
+	voteAverage: number | null;
+	voteCount: number | null;
 	networks: string[];
 	providers: Provider[];
 	addedAt: string;

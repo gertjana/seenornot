@@ -127,8 +127,8 @@
 							<div
 								class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/30 to-transparent"
 							></div>
-							<div class="absolute top-2 right-2">
-								<Providers providers={show.providers} max={3} />
+							<div class="absolute top-2 right-2 max-w-[60%] rounded-lg bg-zinc-950/70 p-1">
+								<Providers providers={show.providers} />
 							</div>
 							<div class="absolute right-3 bottom-2 left-3">
 								<div class="truncate text-lg font-semibold">{show.name}</div>
@@ -202,7 +202,7 @@
 									{ep.name ?? ''}
 								</div>
 							</div>
-							<Providers providers={show.providers} max={2} size="h-5 w-5" />
+							<div class="max-w-24"><Providers providers={show.providers} size="h-5 w-5" /></div>
 							<div class="w-24 shrink-0 text-right text-sm text-amber-400">
 								{relativeDay(ep.airDate)}
 							</div>

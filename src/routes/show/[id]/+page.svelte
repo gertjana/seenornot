@@ -4,6 +4,7 @@
 	import Poster from '$lib/components/Poster.svelte';
 	import Progress from '$lib/components/Progress.svelte';
 	import Providers from '$lib/components/Providers.svelte';
+	import Rating from '$lib/components/Rating.svelte';
 	import FavoriteButton from '$lib/components/FavoriteButton.svelte';
 	import { backdrop, epCode, formatDate, relativeDay, still } from '$lib/format';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
@@ -156,9 +157,10 @@
 				{#if data.show.status}<span>{data.show.status}</span>{/if}
 				{#if data.show.networks.length}<span>{data.show.networks.join(', ')}</span>{/if}
 			</div>
+			<div class="mt-2"><Rating average={data.show.voteAverage} votes={data.show.voteCount} /></div>
 			{#if data.show.providers.length}
-				<div class="mt-3 flex items-center gap-2">
-					<Providers providers={data.show.providers} max={6} size="h-8 w-8" />
+				<div class="mt-3 flex flex-wrap items-center gap-2">
+					<Providers providers={data.show.providers} names size="h-6 w-6" />
 					{#if data.show.providersLink}
 						<a
 							href={data.show.providersLink}
@@ -169,7 +171,9 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="mt-3 text-xs text-zinc-500">Not on a streaming subscription in your region</div>
+				<div class="mt-3 text-xs text-zinc-500">
+					No streaming availability listed for your region
+				</div>
 			{/if}
 			<p class="mt-3 line-clamp-3 hidden text-sm text-zinc-300 sm:block">{data.show.overview}</p>
 		</div>
