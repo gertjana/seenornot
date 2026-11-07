@@ -30,9 +30,7 @@
 
 	const favorites = $derived(data.shows.filter((s) => s.favorite).sort(bySeasonEnd));
 
-	const upNext = $derived(
-		data.shows.filter((s) => s.category === 'watching').sort(bySeasonEnd)
-	);
+	const upNext = $derived(data.shows.filter((s) => s.category === 'watching').sort(bySeasonEnd));
 	const notStarted = $derived(
 		data.shows
 			.filter((s) => s.category === 'not_started')
