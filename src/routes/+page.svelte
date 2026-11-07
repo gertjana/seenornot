@@ -4,28 +4,33 @@
 	import Progress from '$lib/components/Progress.svelte';
 	import Providers from '$lib/components/Providers.svelte';
 	import FavoriteButton from '$lib/components/FavoriteButton.svelte';
-	import { backdrop, epCode, relativeDay, still, sortTitle } from '$lib/format';
+	import { backdrop, epCode, relativeDay, still } from '$lib/format';
 	import type { LibraryShow } from '$lib/types';
 	import { flip } from 'svelte/animate';
 	import { fade } from 'svelte/transition';
 
 	let { data } = $props();
-	const favorites = $derived(
-		data.shows
-			.filter((s) => s.favorite)
-			.sort((a, b) =>
-				sortTitle(a.name).localeCompare(sortTitle(b.name), undefined, {
-					sensitivity: 'base',
-					numeric: true
-				})
-			)
-	);
+	function seasonProgress(show: LibraryShow) {
+		if (!show.next) return null;
+		const season = show.seasons.find((s) => s.seasonNumber === show.next!.seasonNumber);
+		if (!season) return null;
+		const left = season.episodes.filter((e) => e.aired && !e.watched).length;
+		const started = season.episodes.some((e) => e.watched);
+		return { left, started };
+	}
 
-	const upNext = $derived(
-		data.shows
-			.filter((s) => s.category === 'watching')
-			.sort((a, b) => (b.lastWatchedAt ?? '').localeCompare(a.lastWatchedAt ?? ''))
-	);
+	function bySeasonEnd(a: LibraryShow, b: LibraryShow) {
+		const pa = seasonProgress(a);
+		const pb = seasonProgress(b);
+		if (!pa || !pb) return pa ? -1 : pb ? 1 : 0;
+		if (pa.left !== pb.left) return pa.left - pb.left;
+		if (pa.started !== pb.started) return pa.started ? -1 : 1;
+		return (b.lastWatchedAt ?? '').localeCompare(a.lastWatchedAt ?? '');
+	}
+
+	const favorites = $derived(data.shows.filter((s) => s.favorite).sort(bySeasonEnd));
+
+	const upNext = $derived(data.shows.filter((s) => s.category === 'watching').sort(bySeasonEnd));
 	const notStarted = $derived(
 		data.shows
 			.filter((s) => s.category === 'not_started')
