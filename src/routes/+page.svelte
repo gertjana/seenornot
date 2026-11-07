@@ -23,8 +23,8 @@
 		const pa = seasonProgress(a);
 		const pb = seasonProgress(b);
 		if (!pa || !pb) return pa ? -1 : pb ? 1 : 0;
-		if (pa.started !== pb.started) return pa.started ? -1 : 1;
 		if (pa.left !== pb.left) return pa.left - pb.left;
+		if (pa.started !== pb.started) return pa.started ? -1 : 1;
 		return (b.lastWatchedAt ?? '').localeCompare(a.lastWatchedAt ?? '');
 	}
 
